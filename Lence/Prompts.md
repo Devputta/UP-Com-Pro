@@ -224,3 +224,205 @@ At completion, report:
 5. Any migration or privacy considerations.
 
 Do not claim that a feature works or that tests passed unless you verified it. Preserve the existing product and deliver incremental, reviewable changes.
+--------------------------------------------------------------------
+Prompt 1.2
+--------------------------------------------------------------------
+
+# DocuLens — Fix Table Extraction, Simplify Header, Improve Reader and Comparison Exports
+
+Act as a senior React + TypeScript engineer specializing in PDF parsing, document intelligence, accessibility, and production-quality UI.
+
+Work on my existing DocuLens repository and inspect the uploaded project before changing anything.
+
+The current issues are:
+1. The first two test PDFs contain tables, but DocuLens does not detect them.
+2. The global header contains a document selector that takes up space and is confusing outside document-specific workflows.
+3. The Reader repeats a “Document:” label that does not add useful information.
+4. Compare currently exports a Markdown report, but users also need a well-formatted PDF report.
+5. Some UI elements feel cluttered and overly generated instead of deliberately designed.
+
+Make targeted fixes. Do not rewrite the application or replace its architecture.
+
+## 1. Fix actual PDF table extraction
+
+Inspect `src/services/pdfParser.ts`, `src/components/TablesView.tsx`, the document/table types, and the PDF ingestion pipeline.
+
+The first two DocuLens test PDFs contain drawn tables. Investigate why those tables are not detected and fix the actual extraction path.
+
+Important: PDF.js generally extracts positioned text items, not complete semantic table structures. Do not assume that every table is represented as a ready-made HTML-like grid.
+
+Implement a practical extraction pipeline:
+
+### A. Detect table-like page regions
+- Use PDF.js text items and their positional metadata.
+- Group text items into rows using their vertical positions, with tolerances that account for font size and minor alignment differences.
+- Detect likely columns from consistent horizontal positions and gaps between text groups.
+- Preserve the reading order and align cells to the appropriate columns.
+- Handle multi-line cells, wrapped headings, empty cells, merged-looking cells, and inconsistent spacing where feasible.
+- Avoid combining unrelated paragraphs into false tables.
+
+### B. Validate extracted tables
+- Require reasonable evidence of a table, such as multiple aligned rows and repeated column positions.
+- Avoid treating ordinary prose, bullet lists, or single lines as tables.
+- Preserve headers, rows, page numbers, source document IDs, and extraction provenance.
+- Report extraction confidence or a clear warning when the structure is uncertain.
+- Support more than one table per page.
+
+### C. Provide graceful fallbacks
+- If automatic extraction fails, allow users to inspect the page and retry or correct the extracted table where practical.
+- Clearly distinguish “no table detected” from “table extraction failed.”
+- Never fabricate table cells to fill missing data.
+- If a PDF contains scanned images and OCR is unavailable, explain that limitation instead of claiming the page has no tables.
+
+### D. Verify with the existing test PDFs
+Use:
+- `DocuLens_Test_Document_A_Computers_Algorithms.pdf`
+- `DocuLens_Test_Document_B_Computing_Concepts.pdf`
+- `DocuLens_Test_Document_C_Search_Tables_Edge_Cases.pdf`
+
+The first two contain synthetic tables. Upload them and verify that the extracted tables preserve the expected rows, columns, and cell values.
+
+Add tests for alignment differences, wrapped text, multiple tables, ordinary paragraphs, and missing table content. Do not hardcode table results based on these particular test filenames.
+
+## 2. Simplify the global header
+
+Inspect `src/components/Header.tsx`.
+
+The header currently contains a global document-scope selector, help button, Settings button with text, online/offline status, navigation, and mobile controls.
+
+Make it cleaner and more compact.
+
+Requirements:
+- Keep the DocuLens logo and wordmark on the left.
+- Keep the existing Library, Reader, Search, Ask Documents, Tables, and Compare navigation.
+- Remove the global document selector from the desktop header and mobile header.
+- Remove the separate Help button from the global header if its functionality can be accessed from the Settings or help area without losing important capabilities.
+- Keep only a compact Settings gear icon on the right, with an accessible name and tooltip.
+- Keep essential online/offline status only if it remains useful and does not crowd the layout.
+- Preserve the mobile menu and ensure all navigation remains available.
+- Do not remove document selectors from places where they are genuinely needed, such as the Compare workspace or table filtering.
+
+The settings icon must navigate to the existing Settings/Workspace section. Do not create a decorative or nonfunctional button.
+
+Use deliberate spacing and consistent alignment. Avoid a boxed control around every header element. Do not shrink the logo until it becomes unreadable.
+
+## 3. Remove redundant “Document:” text in Reader
+
+Inspect `src/components/ReaderView.tsx` and its parent navigation.
+
+When a document is open, its title should be clear without redundant labels.
+
+Requirements:
+- Remove the extra “Document:” prefix if the same information is already visible in the Reader title or toolbar.
+- Keep the filename or document title visible in one clear location.
+- Keep page navigation, search highlights, notes, and reader actions working.
+- Do not remove document selection from the Library or other workflows where it is necessary.
+- Ensure changing documents updates the displayed title and page state correctly.
+- Do not break navigation from Search, Citations, or Compare into the Reader.
+
+## 4. Add a real PDF export to Compare
+
+Inspect `src/components/CompareView.tsx` and the existing Markdown export.
+
+Keep Markdown export and add a separate **Export PDF** action.
+
+The user should be able to export the current comparison as:
+- Markdown (`.md`)
+- PDF (`.pdf`)
+
+Both exports must represent the same current comparison mode and relevant comparison results.
+
+### PDF report requirements
+Create a clean, professional report with:
+- DocuLens branding and report title.
+- Reference document title and comparison document title.
+- Generation date and selected comparison mode.
+- A concise summary of findings.
+- Shared concepts.
+- Definition comparisons.
+- Key differences.
+- Topics shared by both documents.
+- Topics unique to each document.
+- Supporting excerpts, source document names, and page references where available.
+- Clear warnings when a result is uncertain or evidence is insufficient.
+
+Formatting:
+- Use readable typography, restrained spacing, consistent headings, and page numbers.
+- Use the existing paper, charcoal, and burnt-orange visual identity.
+- Prevent table rows and long passages from overflowing page boundaries.
+- Handle long filenames, quotes, and large comparison reports.
+- Use page breaks sensibly and avoid splitting a heading from its following content.
+- Do not include empty sections or invent missing findings.
+- Do not show similarity scores unless the underlying method is documented and meaningful.
+
+Implementation:
+- Prefer an existing reliable PDF export mechanism if the project already has one.
+- Otherwise choose the smallest appropriate solution, such as a carefully styled print document or a suitable PDF-generation library.
+- If using browser print-to-PDF, provide a clean print stylesheet and an explicit print dialog flow. Do not claim a PDF file was automatically downloaded if the browser only opened a print dialog.
+- If using a PDF-generation library, add it through the project's package manager and verify the production build.
+- Ensure exports work for long reports, not just a single page.
+- Sanitize filenames and clean up temporary resources.
+
+### Markdown export corrections
+- Preserve valid Markdown formatting and headings.
+- Include the selected comparison mode.
+- Escape or format source text safely.
+- Include accurate source page references.
+- Avoid dumping internal IDs, irrelevant chunk counts, or implementation details into the human-readable report unless they are useful to the reader.
+- Keep the output readable when opened in a normal Markdown viewer.
+
+Show clear success or failure feedback for each export.
+
+## 5. Make the interface feel human-designed
+
+Preserve the established DocuLens identity:
+- Paper: `#F4F1E9`
+- Charcoal: `#242520`
+- Burnt orange: `#B84B2F`
+
+Use the existing logo. Do not generate a replacement.
+
+Design rules:
+- Prefer clear hierarchy and useful whitespace over decorative cards.
+- Keep controls close to the content they affect.
+- Avoid unnecessary uppercase labels, excessive borders, repeated rounded containers, fake statistics, and generic AI-style copy.
+- Use concise, natural wording.
+- Make empty states explain the next useful action.
+- Do not animate elements without a clear interaction purpose.
+- Ensure the interface works on desktop, tablet, and mobile.
+- Preserve keyboard accessibility, visible focus, and readable contrast.
+
+Do not redesign unrelated screens just to make the change look larger.
+
+## 6. Data integrity and compatibility
+
+- Preserve existing IndexedDB documents and IDs.
+- Do not delete or reseed the user's library.
+- Avoid destructive changes to stored table structures.
+- If table extraction changes the schema, add a backward-compatible migration or reprocess option.
+- Do not silently overwrite existing extracted tables without a safe recovery path.
+- Do not send document contents to external services without disclosure and the required user choice.
+
+## 7. Test and report honestly
+
+Run the available checks:
+- TypeScript/lint checks.
+- Unit tests.
+- Production build.
+- PDF extraction tests using all three synthetic PDFs.
+- Markdown export tests.
+- PDF export tests, including a long report.
+- Reader navigation and page-reference regression tests.
+- Desktop and mobile header checks.
+
+At completion, provide:
+1. Root cause of table extraction failure.
+2. Files changed.
+3. What was fixed and what remains limited.
+4. Actual commands executed and their results.
+5. Any added dependencies.
+6. Any migration or reprocessing steps required.
+
+Do not claim table detection works unless it has been tested against the PDFs. Do not claim the PDF export works unless an actual exported report has been generated and checked.
+
+Start by inspecting the current implementation, then fix the table extraction issue before polishing the UI.

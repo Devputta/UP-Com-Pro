@@ -426,3 +426,70 @@ At completion, provide:
 Do not claim table detection works unless it has been tested against the PDFs. Do not claim the PDF export works unless an actual exported report has been generated and checked.
 
 Start by inspecting the current implementation, then fix the table extraction issue before polishing the UI.
+
+----------------------------------------------------------------
+UI - Color
+------------------------------------------------------------------
+
+Redesign the color theme of my React + Tailwind v4 app "DocuLens" (a local-first
+document intelligence tool) into a professional dark theme. Change colors only.
+Do not change layout, copy, logic, fonts, or component structure.
+
+GOAL
+A calm, high-contrast, enterprise-grade dark UI. Neutral blue-grey surfaces,
+one restrained amber accent, and muted status colors. It should feel like a
+serious research/audit tool, not a flashy app.
+
+PALETTE (use exactly these values)
+Page background ........ #0F1217
+Card / panel ........... #161B22
+Raised / hover / chip .. #1D242E
+Border ................. #262D38   (stronger border: #343D4B)
+Text primary ........... #E6E9EF
+Text secondary ......... #9AA3B2
+Text faint ............. #6B7585
+Accent (amber) ......... #E8A94A   (hover #D4943A)
+Accent subtle bg ....... #2A2112
+Accent border .......... #5A4520
+Text on accent fill .... #1A1305
+Overlay/backdrop ....... black at 60% opacity
+
+CURRENT COLORS TO REPLACE (hardcoded as Tailwind arbitrary values in
+src/components/*.tsx, src/App.tsx, index.html, src/index.css)
+#F5F2EB -> #0F1217     #FAF8F5 -> #161B22
+#ECE7DD / #EAE5D9 / #EAE4D7 / #F4F1E9 -> #1D242E
+#E0D9CC -> #262D38     #D5CEBF / #D0C8B8 / #C8BFB0 -> #343D4B
+#20211D -> #E6E9EF     #383933 (hover on dark buttons) -> #C5CAD4
+#5C5E55 -> #9AA3B2     #8E9085 -> #6B7585
+#B84B2F -> #E8A94A     #9F3E25 -> #D4943A
+#F9EBE6 -> #2A2112     #E8B4A5 -> #5A4520
+
+RULES
+1. Replace colors everywhere they appear. Check text, backgrounds, borders,
+   hover and focus states, placeholders, selection color, scrollbars and
+   modal overlays.
+2. Buttons that used the dark ink background with paper-colored text must keep
+   readable contrast on the new theme. Primary buttons are light (#E6E9EF) with
+   dark text (#0F1217). Any filled amber element uses dark text (#1A1305).
+3. Status colors (red, emerald, amber, rose, blue, stone) must be remapped for
+   dark mode. Light tints (the 50-300 stops) become dark translucent tints,
+   and dark text (the 700-950 stops) becomes light text. Override them in the
+   Tailwind v4 @theme block in src/index.css so the change happens in one place.
+   Solid destructive buttons use #C23B3B with white text.
+4. Set color-scheme: dark on html, plus <meta name="color-scheme"> and
+   <meta name="theme-color" content="#0F1217"> in index.html.
+5. Keep WCAG AA contrast (4.5:1 for body text). Check text-secondary on cards,
+   amber on dark surfaces, and highlighted search matches.
+6. Search highlights and active-tab states use amber at 15-30% opacity with
+   amber text. Do not use bright saturated fills.
+7. Leave the PDF export (jsPDF) in light colors so printouts stay readable.
+8. Where possible, replace repeated hardcoded hex values with the theme tokens
+   (bg-paper, bg-paper-light, text-ink, text-ink-muted, border-paper-border,
+   text-accent) so the theme can be changed in a single file later.
+
+DELIVERABLE
+- List every file changed.
+- Confirm that no old light-theme hex values remain (search for the old values
+  above).
+- Run the build and the tests, and fix anything my changes broke.
+- Note any component where contrast looked questionable and how you handled it.

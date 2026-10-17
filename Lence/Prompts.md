@@ -493,3 +493,52 @@ DELIVERABLE
   above).
 - Run the build and the tests, and fix anything my changes broke.
 - Note any component where contrast looked questionable and how you handled it.
+
+--------------------------------------------------------------------------------
+v2.-prompts
+-----------------------------------------------------------------------------------
+--
+In my React + TypeScript + Tailwind v4 app "DocuLens" (dark Midnight and Amber theme),
+make these three UI changes. Do not change search, comparison, export file contents,
+or any other logic.
+
+1) TABLES SCREEN: TIDY THE HEADER AND ONE EXPORT DROPDOWN
+- In src/components/TablesView.tsx the active-table header currently has several
+  separate buttons (Inspect in Reader, JSON, Export Safe CSV) that wrap onto two rows.
+- Replace the JSON and CSV buttons with a single "Export" dropdown button, aligned to
+  the right of the table title. Keep "Open in Reader (p.N)" as a normal button to its left.
+- Dropdown items: "CSV (formula-safe)" and "JSON", each with an icon and a short hint.
+  Keep the existing CSV formula-injection protection exactly as it is.
+- Create a reusable src/components/ExportMenu.tsx that takes items
+  [{label, hint, icon, onClick}]. Requirements: closes on outside click, on Escape,
+  and after choosing an item; aria-haspopup="menu", aria-expanded, role="menu" and
+  role="menuitem"; menu opens right-aligned under the button with z-index above
+  the table; button height 32px with a visible amber (#E8A94A) focus ring.
+- Header row must stay on one line on desktop: title and badges on the left,
+  actions on the right (shrink-0). On mobile it stacks.
+
+2) COMPARE SCREEN: SAME DROPDOWN
+- In src/components/CompareView.tsx replace "Export PDF Report" and
+  "Export Markdown" with the same ExportMenu: "PDF report" and "Markdown summary".
+  Same handlers as before, right-aligned next to the page title.
+
+3) READER AND SEARCH: STATIC MARKER HIGHLIGHT, NO BLINKING
+- In src/components/ReaderView.tsx the page highlight flickers while typing.
+  Fix it:
+  - Debounce the highlight query by 250ms so the page highlight only updates when
+    typing pauses (keep the input itself instant).
+  - Style each match like a highlighter marker: solid amber background
+    (#E8A94A at about 65% opacity), dark text (#0F1217), normal font weight
+    (no bold, so the layout never shifts), no underline, no transition or animation,
+    rounded 3px, and box-decoration-break: clone for matches that wrap lines.
+  - Remove the amber tint and border on the whole paragraph when it contains a
+    match. Use only a thin left border in amber at 40% opacity.
+  - Auto-scroll to the first match only after the debounce, with
+    scrollIntoView({ behavior: 'smooth', block: 'nearest' }), not 'center'.
+- Apply the same marker style to matches in src/components/SearchView.tsx
+  (primary terms at 65% opacity with dark text, secondary terms at 30% opacity).
+
+CHECKS
+- No hardcoded colors outside the palette: #0F1217, #161B22, #1D242E, #262D38,
+  #343D4B, #E6E9EF, #9AA3B2, #6B7585, #E8A94A.
+- Run tsc --noEmit, the build, and the tests. List every file you changed.
